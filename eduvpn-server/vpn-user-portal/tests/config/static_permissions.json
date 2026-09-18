@@ -1,0 +1,22 @@
+{
+    "ipv4": [
+        "IP@0.0.0.0/0"
+    ],
+    "ipv6": [
+        "IP@::/0"
+    ],
+    "allowed-ip-list": [
+        "IP@192.168.5.0/24",
+        "IP@fd00::/64"
+    ],
+    "eduPersonAffiliation!employee": [
+        "foo"
+    ],
+    "example-permission": [
+        "foo",
+        "bar"
+    ],
+    "other-example-permission": [
+        "bar"
+    ]
+}

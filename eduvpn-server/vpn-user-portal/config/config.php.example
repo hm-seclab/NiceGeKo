@@ -1,0 +1,388 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * eduVPN - End-user friendly VPN.
+ *
+ * Copyright: 2016-2022, The Commons Conservancy eduVPN Programme
+ * SPDX-License-Identifier: AGPL-3.0+
+ */
+
+return [
+    // Choose the Portal Template to be used (must be installed)
+    // OPTIONAL, DEFAULT = null
+    // 'styleName' => 'LC',
+    // 'styleName' => 'eduVPN',
+
+    // Default VPN Session Expiry
+    // OPTIONAL, DEFAULT = P90D
+    // 'sessionExpiry' => 'P90D',  // 90 days
+    // 'sessionExpiry' => 'P1D',   // 1 day
+    // 'sessionExpiry' => 'PT12H', // 12 hours
+
+    // Portal Database Configuration
+    // NOTE: using any other database than SQLite requires *manual*
+    // initialization and migration!
+    // OPTIONAL, DEFAULT = local SQLite database
+    // 'Db' => [
+    //    // ** PostgreSQL **
+    //    'dbDsn' => 'pgsql:host=db.example.org;dbname=vpn;user=vpn;password=s3cr3t',
+    // ],
+    // 'Db' => [
+    //    // ** MariaDB/MySQL **
+    //    'dbDsn' => 'mysql:host=db.example.org;dbname=vpn',
+    //    'dbUser' => 'vpn',
+    //    'dbPass' => 's3cr3t',
+    // ],
+
+    // Choose the User Authentication Module
+    // OPTIONAL, DEFAULT = DbAuthModule
+    // 'authModule' => 'DbAuthModule',         // PDO (database)
+    // 'authModule' => 'ClientCertAuthModule', // TLS Client Cert
+    // 'authModule' => 'LdapAuthModule',       // LDAP
+    // 'authModule' => 'RadiusAuthModule',     // RADIUS
+    // 'authModule' => 'ShibAuthModule',       // SAML (Shibboleth)
+    // 'authModule' => 'MellonAuthModule',     // SAML (mod_auth_mellon)
+    // 'authModule' => 'PhpSamlSpAuthModule',  // SAML (php-saml-sp)
+    // 'authModule' => 'OidcAuthModule',       // OpenID Connect (mod_auth_openidc)
+
+    // ** LDAP **
+    // 'LdapAuthModule' => [
+    //    // *** FreeIPA ***
+    //    // -H ldap://ipa.tuxed.example
+    //    'ldapUri' => 'ldap://ipa.tuxed.example',
+    //    // -D "uid=fkooman,cn=users,cn=accounts,dc=tuxed,dc=example"
+    //    'bindDnTemplate' => 'uid={{UID}},cn=users,cn=accounts,dc=tuxed,dc=example',
+    //    // (if -b is the same -D we do NOT specify baseDn...)
+    //    // to normalize the entered user ID, specify the attribute you want to
+    //    // use to identify the user in the VPN server
+    //    'userIdAttribute' => 'uid',
+
+    //    // *** AD (NetBIOS domain name) ***
+    //    // -H ldap://ad.example.org \
+    //    'ldapUri' => 'ldap://ad.example.org',
+    //    // -D "DOMAIN\fkooman" \
+    //    'bindDnTemplate' => 'DOMAIN\{{UID}}',
+    //    // -b "dc=example,dc=org" \
+    //    'baseDn' => 'dc=example,dc=org',
+    //    // "(sAMAccountName=fkooman)"
+    //    'userFilterTemplate' => '(sAMAccountName={{UID}})',
+    //    // to normalize the entered user ID, specify the attribute you want to
+    //    // use to identify the user in the VPN server
+    //    'userIdAttribute' => 'sAMAccountName',
+
+    //    // *** AD (userPrincipalName) ***
+    //    // -H ldap://ad.example.org \
+    //    'ldapUri' => 'ldap://ad.example.org',
+    //    // -D "fkooman@example.org" \
+    //    'bindDnTemplate' => '{{UID}}',
+
+    //    // when the user does NOT specify the realm, e.g. only "fkooman", this
+    //    // option will add "@example.org" to the "User Name" as specified on
+    //    // the login page. If and only if there is no "@" in the provided
+    //    // "User Name".!
+    //    'addRealm' => 'example.org',
+    //    // -b "dc=example,dc=org" \
+    //    'baseDn' => 'dc=example,dc=org',
+    //    // "(userPrincipalName=fkooman@example.org)"
+    //    'userFilterTemplate' => '(userPrincipalName={{UID}})',
+    //    // to normalize the entered user ID, specify the attribute you want to
+    //    // use to identify the user in the VPN server
+    //    'userIdAttribute' => 'userPrincipalName',
+
+    //    // *** Search First ***
+    //    // -H ldap://server.ipa.test \
+    //    'ldapUri' => 'ldap://server.ipa.test',
+    //    // -b "cn=users,cn=accounts,dc=ipa,dc=test" \
+    //    'baseDn' => 'cn=users,cn=accounts,dc=ipa,dc=test',
+    //    // "(uidNumber=572600001)" \
+    //    'userFilterTemplate' => '(uidNumber={{UID}})',
+    //    // to normalize the entered user ID, specify the attribute you want to
+    //    // use to identify the user in the VPN server
+    //    'userIdAttribute' => 'uidNumber',
+    //    // you can also perform a bind before searching as not all LDAP servers
+    //    // allow anonymous bind to search the directory. If at all possible,
+    //    // allow anonymous bind on your LDAP server from the VPN server.
+    //    // NEVER USE THE LDAP ADMIN ACCOUNT HERE!
+    //    //'searchBindDn' => 'cn=Anonymous Search User,dc=example,dc=org',
+    //    //'searchBindPass' => 's3r3t',
+
+    //    //'permissionAttributeList' => [],
+    // ],
+
+    // ** RADIUS **
+    // 'RadiusAuthModule' => [
+    //    'serverList' => [
+    //        // Format: HOST:PORT:SECRET
+    //        'radius.example.org:1812:testing123',
+    //    ],
+    //    'addRealm' => 'example.org',
+    //    'nasIdentifier' => 'vpn.example.org',
+    //    // 'permissionAttribute' => RADIUS_REPLY_MESSAGE,
+    //    // 'permissionAttribute' => 16,
+    // ],
+
+    // ** SAML (Shibboleth) **
+    // 'ShibAuthModule' => [
+    //    'userIdAttribute' => 'persistent-id',
+    //    //'userIdAttribute' => 'eppn',
+
+    //    // ** AUTHORIZATION | PERMISSIONS **
+    //    //'permissionAttributeList' => ['entitlement'],
+    //    //'permissionAttributeList' => ['affiliation'],
+    // ],
+
+    // ** SAML (mod_auth_mellon) **
+    // 'MellonAuthModule' => [
+    //    // OID for eduPersonTargetedId
+    //    'userIdAttribute' => 'MELLON_urn:oid:1_3_6_1_4_1_5923_1_1_1_10',
+    //    // OID for eduPersonPrincipalName
+    //    //'userIdAttribute' => 'MELLON_urn:oid:1_3_6_1_4_1_5923_1_1_1_6',
+
+    //    // ** AUTHORIZATION | PERMISSIONS **
+    //    // OID for eduPersonEntitlement
+    //    //'permissionAttributeList' => ['MELLON_urn:oid:1_3_6_1_4_1_5923_1_1_1_7'],
+    //    // OID for eduPersonAffiliation
+    //    //'permissionAttributeList' => ['MELLON_urn:oid:1_3_6_1_4_1_5923_1_1_1_1'],
+    // ],
+
+    // ** SAML (php-saml-sp) **
+    // 'PhpSamlSpAuthModule' => [
+    //    'userIdAttribute' => 'uid',
+    //    //'userIdAttribute' => 'eduPersonTargetedID',
+    //    //'userIdAttribute' => 'eduPersonPrincipalName',
+
+    //    // ** AUTHORIZATION | PERMISSIONS **
+    //    //'permissionAttributeList' => [
+    //    //      'eduPersonEntitlement',
+    //    //      'eduPersonAffiliation',
+    //    //],
+
+    //    // AuthnContext required for *all* users
+    //    //'authnContext' => ['urn:oasis:names:tc:SAML:2.0:ac:classes:TimesyncToken'],
+    // ],
+
+    // ** OpenID Connect (mod_auth_openidc) **
+    // 'OidcAuthModule' => [
+    //    'userIdAttribute' => 'REMOTE_USER',
+    // //   'permissionAttributeList' => [],
+    // ],
+
+    // List of permissions a user MUST have in order to get access to the
+    // service
+    // OPTIONAL, DEFAULT = null
+    // 'accessPermissionList' => ['http://eduvpn.org/role/user'],
+
+    // List of permissions a user can have that makes them admin
+    // OPTIONAL, DEFAULT = []
+    // 'adminPermissionList' => ['http://eduvpn.org/role/admin'],
+
+    // List of user IDs that are made admin
+    // OPTIONAL, DEFAULT = []
+    // list of userIds that have access to the admin
+    // 'adminUserIdList' => ['admin'],
+
+    // The languages supported by the Portal UI
+    // OPTIONAL, DEFAULT = ['en-US']
+    // 'enabledLanguages' => [
+    //     'af-ZA',
+    //     'ar-MA',
+    //     'da-DK',
+    //     'de-DE',
+    //     'en-US',
+    //     'es-LA',
+    //     'et-EE',
+    //     'fr-FR',
+    //     'nb-NO',
+    //     'nl-NL',
+    //     'pl-PL',
+    //     'pt-PT',
+    //     'ro-RO',
+    //     'sv-SE',
+    //     'uk-UA',
+    // ],
+
+    // The default language of the Portal UI
+    // OPTIONAL, DEFAULT = 'en-US'
+    // 'defaultLanguage' => 'en-US',
+
+    // Show the user's "raw" permissions on the "Account" page
+    // OPTIONAL, DEFAULT = false
+    // 'showPermissions' => false,
+
+    // Limit the number of active VPN configurations downloaded through the
+    // Portal. When this limit has been reached, an old(er) one needs to be
+    // deleted first...
+    // See also maxActiveConfigurations under [Api] to limit the VPN apps
+    // OPTIONAL, DEFAULT = 3
+    // 'maxActiveConfigurations' => 3,
+    // do NOT allow any portal configurations downloads, allow VPN apps only
+    // 'maxActiveConfigurations' => 0,
+
+    // 'Log' => [
+    //    // Write CONNECT/DISCONNECT events to syslog
+    //    // OPTIONAL, DEFAULT = false
+    //    //'syslogConnectionEvents' => true,
+
+    //    // Log the "originating IP", i.e. the IP the VPN client is connecting
+    //    // from. Currently only available for OpenVPN connections.
+    //    // OPTIONAL, DEFAULT = false
+    //    //'originatingIp' => false,
+    // ],
+
+    // 'Api' => [
+    //    // Limit the number of active VPN configurations through the API.
+    //    // Effectively this means that the user can have this many VPN apps
+    //    // connected simultaneously.
+    //    // See also maxActiveConfigurations outside [Api] to limit portal
+    //    // configuration downloads
+    //    // OPTIONAL, DEFAULT = 3
+    //    //'maxActiveConfigurations' => 3,
+    //    // do NOT allow any API configurations downloads, allow portal downloads
+    //    // only
+    //    //'maxActiveConfigurations' => 0,
+    // ],
+
+    // 'WireGuard' => [
+    //    // The UDP port used by WireGuard
+    //    // OPTIONAL, DEFAULT = 51820
+    //    'listenPort' => 51820,
+    //    //'listenPort' => 443,
+    // ],
+
+    // OPTIONAL, DEFAULT = 'FileSessionModule'
+    // 'sessionModule' => 'FileSessionModule',
+    // 'sessionModule' => 'MemcacheSessionModule',
+
+    // 'MemcacheSessionModule' => [
+    //    // List of memcached servers host:port
+    //    // OPTIONAL, DEFAULT = []
+    //    'serverList' => [
+    //        'localhost:11211'
+    //    ]
+    // ],
+
+    // VPN Profile List
+    'ProfileList' => [
+        [
+            // Unique identifier for this profile.
+            // REQUIRED
+            'profileId' => 'default',
+
+            // ** WireGuard & OpenVPN **
+            // The name of the profile as shown in the user and admin portals
+            // REQUIRED
+            'displayName' => 'Default',
+
+            // The hostname the VPN client(s) will connect to
+            // REQUIRED
+            'hostName' => 'vpn.example',
+
+            // Route all client traffic over the VPN
+            // OPTIONAL, DEFAULT = true
+            // 'defaultGateway' => false,
+
+            // Provide DNS server(s) to the VPN client
+            // *Only* used when defaultGateway is true or dnsSearchDomainList
+            // are specified
+            // DEFAULT  = []
+            'dnsServerList' => ['9.9.9.9', '2620:fe::fe'],
+
+            // Route client traffic for selected prefixes over the VPN
+            // OPTIONAL, DEFAULT = []
+            // 'routeList' => [
+            //    '192.168.1.0/24',
+            //    'fd11::/64',
+            // ],
+
+            // Do NOT route client traffic for selected prefixes over the VPN
+            // OPTIONAL, DEFAULT = []
+            // 'excludeRouteList' => [
+            //    '192.168.1.5/32',
+            //    'fd11::11/128',
+            // ],
+
+            // Restrict access to this profile to accounts with the listed
+            // Permissions. If NOT set, no restrictions!
+            // OPTIONAL, DEFAULT = null
+            // 'aclPermissionList' => [],
+
+            // List of domains
+            // OPTIONAL, DEFAULT = []
+            // 'dnsSearchDomainList' => ['a.example.org', 'b.example.org'],
+
+            // The URL for connecting to the "node"
+            // OPTIONAL, DEFAULT = 'http://localhost:41194'
+            // 'nodeUrl' => 'http://localhost:41194',
+
+            // The preferred VPN protocol (if both OpenVPN and WireGuard are
+            // supported)
+            // OPTIONAL, DEFAULT = openvpn
+            // 'preferredProto' => 'wireguard',
+
+            // ****************************************************************
+            // * WireGuard                                                    *
+            // ****************************************************************
+
+            // The IPv4 range of the network that will be assigned to WireGuard
+            // clients
+            // REQUIRED (for WireGuard support)
+            'wRangeFour' => '10.43.43.0/24',
+
+            // The IPv6 range of the network that will be assigned to WireGuard
+            // clients
+            // REQUIRED (for WireGuard support)
+            'wRangeSix' => 'fd43::/64',
+
+            // ****************************************************************
+            // * OpenVPN                                                      *
+            // ****************************************************************
+
+            // The IPv4 range of the network that will be assigned to OpenVPN
+            // clients
+            // REQUIRED (for OpenVPN support)
+            'oRangeFour' => '10.42.42.0/24',
+
+            // The IPv6 range of the network that will be assigned to OpenVPN
+            // clients
+            // REQUIRED (for OpenVPN support)
+            'oRangeSix' => 'fd42::/64',
+
+            // UDP ports used by OpenVPN server
+            // together with "tcpPortList" the number of ports MUST be
+            // 1,2,4,8,16,32 or 64
+            // DEFAULT: [1194]
+            // 'oUdpPortList' => [1194],
+
+            // TCP ports used by OpenVPN server
+            // together with "udpPortList" the number of ports MUST be
+            // 1,2,4,8,16,32 or 64
+            // DEFAULT: [1194]
+            // 'oTcpPortList' => [1194],
+
+            // UDP ports used by the VPN client to connect to the OpenVPN
+            // server. If missing, or empty uses udpPortList
+            // DEFAULT: []
+            // 'oExposedUdpPortList' => [],
+
+            // TCP ports used by the VPN client to connect to the OpenVPN
+            // server. If missing, or empty uses tcpPortList
+            // DEFAULT: []
+            // 'oExposedTcpPortList' => [],
+
+            // Block access to local LAN when VPN is active
+            // OpenVPN Only, OPTIONAL, DEFAULT = false
+            // 'oBlockLan' => true,
+
+            // Enable OpenVPN server logging
+            // OpenVPN Only, OPTIONAL, DEFAULT = false
+            // 'oEnableLog' => true,
+
+            // Listen on a specific IP address only
+            // OPTIONAL, DEFAULT = '::'
+            // 'oListenOn' => '192.0.2.99',
+            // 'oListenOn' => '2001:db8::99',
+        ],
+    ],
+];

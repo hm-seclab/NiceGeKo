@@ -1,0 +1,162 @@
+<?php declare(strict_types=1); ?>
+<?php /** @var \Vpn\Portal\Tpl $this */ ?>
+<?php /** @var array<array{profile_id:string,ip_four:string,ip_six:string,connected_at:\DateTimeImmutable,disconnected_at:?\DateTimeImmutable}> $userConnectionLogEntries */ ?>
+<?php /** @var string $userId */ ?>
+<?php /** @var ?string $authData */ ?>
+<?php /** @var bool $isDisabled */ ?>
+<?php /** @var bool $isSelf */ ?>
+<?php /** @var array<\Vpn\Portal\Cfg\ProfileConfig> $profileConfigList */ ?>
+<?php /** @var array<array{profile_id:string,display_name:string,expires_at:\DateTimeImmutable,connection_id:string}> $configList */ ?>
+<?php /** @var string $requestRoot */ ?>
+<?php /** @var string $authModule */ ?>
+<?php /** @var array<\fkooman\OAuth\Server\Authorization> $authorizationList */ ?>
+<?php $this->layout('base', ['activeItem' => 'users', 'pageTitle' => $this->t('Users')]); ?>
+<?php $this->start('content'); ?>
+    <table class="tbl">
+        <tr>
+            <th><?= $this->t('User ID'); ?></th>
+            <td><code><?= $this->e($userId); ?></code></td>
+        </tr>
+<?php if (null !== $authData): ?>
+        <tr>
+            <th><?= $this->t('Authentication Data'); ?></th>
+            <td><code><?= $this->e($authData); ?></code></td>
+        </tr>
+<?php endif; ?>
+    </table>
+
+<?php if ($isSelf): ?>
+        <p class="warning"><?= $this->t('You cannot manage your own user account.'); ?></p>
+<?php else: ?>
+<?php if ($isDisabled): ?>
+    <form class="frm" method="post" action="<?= $this->e($requestRoot); ?>user_enable_account">
+        <fieldset>
+            <input type="hidden" name="user_id" value="<?= $this->e($userId); ?>">
+            <button><?= $this->t('Enable Account'); ?></button>
+        </fieldset>
+    </form>
+<?php endif; ?>
+    <details>
+        <summary><?= $this->t('Danger Zone'); ?></summary>
+        <table class="tbl">
+            <tbody>
+                <tr>
+                    <td>
+                        <form class="frm" method="post" action="<?= $this->e($requestRoot); ?>user_disable_account">
+                            <input type="hidden" name="user_id" value="<?= $this->e($userId); ?>">
+                            <button class="warning"><?= $this->t('Disable Account'); ?></button>
+                        </form>
+                    </td>
+                    <td class="tip">
+<?= $this->t('Remove all application authorizations, (temporary) disable manual VPN configuration downloads and disconnect all clients for this user.');?>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <form class="frm" method="post" action="<?= $this->e($requestRoot); ?>user_delete_account">
+                            <input type="hidden" name="user_id" value="<?= $this->e($userId); ?>">
+<?php if ('DbAuthModule' === $authModule): ?>
+                            <button class="error"><?= $this->t('Delete Account'); ?></button>
+<?php else: ?>
+                            <button class="error"><?= $this->t('Delete Account Data'); ?></button>
+<?php endif; ?>
+                        </form>
+                    </td>
+                    <td class="tip">
+<?php if ('DbAuthModule' === $authModule): ?>
+<?= $this->t('Delete the user account, including all user data.');?>
+<?php else: ?>
+<?= $this->t('Delete the user account data. As this server uses an external authentication source, deleting the account data will not prevent the user from authenticating. Use "Disable Account" for this!'); ?>
+<?php endif; ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </details>
+<?php endif; ?>
+
+    <h2><?= $this->t('Authorized Applications'); ?></h2>
+<?php if (0 === \count($authorizationList)): ?>
+        <p class="plain">
+            <?= $this->t('This user does not have any authorized applications.'); ?>
+        </p>
+<?php else: ?>
+    <table class="tbl">
+        <thead>
+            <tr><th><?= $this->t('Name'); ?></th><th><?= $this->t('Authorized On'); ?></th><th><?= $this->t('Expires On'); ?></th><th><?= $this->t('Last Used'); ?></th></tr>
+        </thead>
+        <tbody>
+<?php foreach ($authorizationList as $authorizationInfo): ?>
+            <tr>
+                <td><span title="<?= $this->e($authorizationInfo->clientId()); ?>"><?= $this->clientIdToDisplayName($authorizationInfo->clientId()); ?></span></td>
+                <td><span title="<?= $this->d($authorizationInfo->authorizedAt()); ?>"><?= $this->d($authorizationInfo->authorizedAt(), 'Y-m-d'); ?></span></td>
+                <td><span title="<?= $this->d($authorizationInfo->expiresAt()); ?>"><?= $this->d($authorizationInfo->expiresAt(), 'Y-m-d'); ?></span></td>
+                <td><span title="<?= $this->d($authorizationInfo->lastUsed()); ?>"><?= $this->d($authorizationInfo->lastUsed(), 'Y-m-d'); ?></span></td>
+            </tr>
+<?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+    <h2><?= $this->t('Configurations'); ?></h2>
+
+    <?php if (0 === \count($configList)): ?>
+        <p class="plain">
+            <?= $this->t('This user does not have any active configurations.'); ?>
+        </p>
+    <?php else: ?>
+        <table class="tbl">
+            <thead>
+                <tr><th><?= $this->t('Profile'); ?></th><th><?= $this->t('Name'); ?></th><th><?= $this->t('Expires On'); ?></th></tr>
+            </thead>
+            <tbody>
+            <?php foreach ($configList as $configEntry): ?>
+                <tr>
+                    <td>
+                        <span title="<?= $this->e($configEntry['profile_id']); ?>"><?= $this->profileIdToDisplayName($profileConfigList, $configEntry['profile_id']); ?></span>
+                    </td>
+                    <td>
+                        <span title="<?= $this->e($configEntry['connection_id']); ?>"><?= $this->etr($configEntry['display_name'], 25); ?></span>
+                    </td>
+                    <td>
+                        <span title="<?= $this->d($configEntry['expires_at']); ?>"><?= $this->d($configEntry['expires_at'], 'Y-m-d'); ?></span>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <h2><?= $this->t('Connections'); ?></h2>
+    <p>
+        <?= $this->t('The most recent VPN connections with this account.'); ?>
+    </p>
+<?php if (0 === \count($userConnectionLogEntries)): ?>
+    <p class="plain"><?= $this->t('This user does not have any connections.'); ?></p>
+<?php else: ?>
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th><?= $this->t('Profile'); ?></th>
+                <th><?= $this->t('Connected'); ?></th>
+                <th><?= $this->t('Disconnected'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+<?php foreach ($userConnectionLogEntries as $logEntry): ?>
+            <tr>
+                <td title="<?= $this->e($logEntry['profile_id']); ?>"><?= $this->profileIdToDisplayName($profileConfigList, $logEntry['profile_id']); ?></td>
+                <td title="IPv4: <?= $this->e($logEntry['ip_four']); ?>, IPv6: <?= $this->e($logEntry['ip_six']); ?>"><?= $this->d($logEntry['connected_at']); ?></td>
+                <td>
+<?php if (null === $logEntry['disconnected_at']): ?>
+                    <em><?= $this->t('N/A'); ?></em>
+<?php else: ?>
+                    <?= $this->d($logEntry['disconnected_at']); ?>
+<?php endif; ?>
+                </td>
+            </tr>
+<?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+<?php $this->stop('content'); ?>

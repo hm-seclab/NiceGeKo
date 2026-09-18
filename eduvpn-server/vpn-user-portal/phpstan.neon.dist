@@ -1,0 +1,12 @@
+parameters:
+    phpVersion:
+        min: 80000
+        max: 80400
+    level: max
+    paths:
+        - src
+        - bin
+        - libexec
+        - web
+        - tests
+        - views

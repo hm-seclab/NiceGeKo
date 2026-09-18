@@ -1,0 +1,1 @@
+ALTER TABLE oauth_authorizations DROP last_used;

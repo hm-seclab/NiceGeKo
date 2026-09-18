@@ -1,0 +1,33 @@
+<?php
+// SPDX-License-Identifier: MIT
+
+// Example eduVPN config.php with PostureCheck section
+// Location: /etc/vpn-user-portal/config.php
+//
+// Add the 'PostureCheck' section to your existing config.
+// Remove it (or leave it as an empty array) to disable posture checking.
+
+return [
+    // ... your existing configuration stays unchanged ...
+
+    // --- mTLS Device Posture Check ---
+    // When this section is present (non-empty), all /v3/connect requests
+    // require a valid device certificate AND an active Wazuh agent.
+    'PostureCheck' => [
+        // Wazuh Manager API URL
+        'wazuhApiUrl' => 'https://wazuh.manager:55000',
+
+        // Wazuh API credentials (for JWT authentication)
+        'wazuhUser' => 'wazuh-wui',
+        'wazuhPass' => 'MyS3cr37P450r.*-',
+
+        // Path to CA certificate for Wazuh API TLS verification.
+        // Leave empty string to skip TLS verification (internal network).
+        'wazuhCaCert' => '',
+
+        // Minimum SCA (Security Configuration Assessment) score.
+        // 0 = disabled (only check agent active status).
+        // Example: 70 = require all SCA policies to score >= 70%.
+        'scaMinScore' => 0,
+    ],
+];

@@ -1,0 +1,12 @@
+{
+    "eduPersonAffiliation!employee": [
+        "foo"
+    ],
+    "example-permission": [
+        "foo",
+        "bar"
+    ],
+    "other-example-permission": [
+        "bar"
+    ]
+}

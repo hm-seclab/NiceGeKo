@@ -1,0 +1,20 @@
+# Credits
+
+* `af-ZA`: Donald Coetzee (TENET South Africa)
+* `ar-MA`: Sami Ait Ali Oulahcen (MARWAN)
+* `cs-CZ`: Michal Drobny, Roman Mariancik and Ivo Durnik (ICS MUNI Czech republic)
+* `da-DK`: Tangui Coulouarn (DeiC), Mikkel Hald (DeiC)
+* `de-DE`: Fred-Oliver Jury (University of applied Sciences Osnabrück), René-Maximilian Malsky (Universität Osnabrück)
+* `es-LA`: Carlos Pedreros, Mario Metzger (Universidad de La Serena, Chile)
+* `et-EE`: Anne Märdimäe (EENet of HITSA)
+* `fr-FR`: Tangui Coulouarn (DeiC), Cédric Corazza
+* `it-IT`: Fabio Amato (Politecnico di Torino, Italia)
+* `lt-LT`: Rimantas B. (VU ITPC)
+* `nb-NO`: Jørn Åne (Uninett)
+* `nl-NL`: François Kooman (DeiC)
+* `pl-PL`: Adam Osuchowski (Silesian University of Technology)
+* `pt-PT`: Raul Ferreira, Marco Teixeira (Universidade do Minho)
+* `sk-SK`: Michal Drobny, Roman Mariancik and Ivo Durnik (ICS MUNI Czech republic)
+* `sv-SE`: Jasper Metselaar (Högskolan Dalarna / Dalarna University, Sweden)
+* `tr-TR`: Adem DOĞAN (The Turkish Academic Network and Information Center (ULAKBIM))
+* `uk-UA`: Volodymyr Yemzhyn (URAN)

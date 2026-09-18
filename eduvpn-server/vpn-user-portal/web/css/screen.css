@@ -1,0 +1,706 @@
+:root {
+  --bg-color: #ededed;
+  --body-text-color: #505050;
+  --accent-color: #216aed;
+  --title-text-color: #000;
+  /* Main page */
+  --bg-color-main: #fff;
+  /* Main header */
+  --bg-color-main-header: #888;
+  --text-color-main-header: #fff;
+  /* Header top of the page */
+  --header-bg-color: #000;
+  --bg-button-header-hover: #4e4e4e;
+  /* Border colors, for blockquote, table */
+  --border-color: #888;
+  /* Inputs */
+  --bg-color-inputs: #fff;
+  --bg-color-inputs-disabled: #eee;
+  --border-color-inputs: #ddd;
+  --text-color-inputs: #000;
+  /* Lead title color */
+  --lead-text-color: #888;
+  /* Doesn't change between color-scheme */
+  --white: #fff;
+}
+
+/* Colors if the user prefer a dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000;
+    --body-text-color: #f0f0f0;
+    --accent-color: #216aed;
+    --title-text-color: #fff;
+    --bg-color-main: #262626;
+    --bg-color-main-header: #555;
+    --text-color-main-header: #fff;
+    --header-bg-color: #000;
+    --bg-color-inputs: #353535;
+    --bg-color-inputs-disabled: #5e5e5e;
+    --border-color-inputs: #1e1e1e;
+    --text-color-inputs: #fff;
+    --lead-text-color: #dfdfdf;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-size: 1.0rem;
+  background-color: var(--bg-color);
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  line-height: 1.4;
+  color: var(--body-text-color);
+  display: grid;
+  min-height: 100vh;
+  grid-template-rows: auto auto auto 1fr auto;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h1, h2, h3, h4 {
+  color: var(--title-text-color);
+  margin: 1em 0;
+  line-height: 1.25;
+}
+
+a, summary {
+  color: var(--accent-color);
+  font-weight: bold;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+pre, code {
+  font-size: inherit;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+button, summary {
+  cursor: pointer;
+}
+
+header.page {
+  text-align: end;
+  padding: 0 1em;
+  background-color: var(--header-bg-color);
+  font-size: 90%;
+}
+
+header.page form {
+  display: inline;
+}
+
+header.page form select, header.page form button {
+  border: 0;
+  color: var(--white);
+  background-color: var(--header-bg-color);
+  padding: 0.5em 0.5em;
+}
+
+header.page form button:disabled {
+  color: var(--bg-button-header-hover);
+  cursor: default;
+}
+
+header.page form button:disabled:hover {
+  background-color: var(--bg-button-header);
+  text-decoration: none;
+}
+
+header.page form button:hover {
+  background-color: var(--bg-button-header-hover);
+  border-radius: 2em;
+  text-decoration: underline;
+}
+
+header.page form {
+  font-size: 85%;
+  display: inline-block;
+  margin: 0 0.5em;
+}
+
+header.page form button {
+  margin: 0.25em;
+  font-weight: bold;
+}
+
+nav {
+  background-color: var(--bg-color-main);
+  text-align: center;
+}
+
+nav ul {
+  margin: 1em auto;
+  display: block;
+  padding: 0;
+}
+
+nav ul li {
+  display: inline-block;
+  padding: 0;
+  margin: 1.5em 0;
+}
+
+nav ul li a {
+  padding: 1em 1.5em;
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+nav ul li.active a {
+  color: var(--accent-color);
+  font-weight: bold;
+  border-bottom: 5px solid var(--accent-color);
+}
+
+nav ul li a:hover {
+  background-color: var(--bg-color);
+  border-radius: 2em;
+}
+
+nav ul li.active a:hover {
+  border-radius: 0;
+  background-color: var(--bg-color-main);
+}
+
+footer {
+  font-size: 85%;
+  background-color: var(--header-bg-color);
+}
+
+footer a {
+  color: var(--white);
+  text-decoration: underline;
+}
+
+footer p {
+  margin: 0;
+  padding: 1em;
+  text-align: center;
+  color: var(--white);
+}
+
+form.frm label {
+  font-weight: bold;
+  display: block;
+  margin: 0.5em 0 0.3em 0;
+}
+
+input[type=checkbox] {
+  margin-top: 1em;
+}
+
+input[type=checkbox] + label {
+  display: inline;
+  font-weight: normal;
+}
+
+form.frm {
+  width: 100%;
+}
+
+form.frm button {
+  border: 0;
+  border-radius: 2em;
+  color: var(--white);
+  background-color: var(--accent-color);
+  padding: 0.5em 1.5em;
+  font-weight: bold;
+  font-size: inherit;
+}
+
+form.frm button.warning {
+  background-color: #cc6600;
+}
+
+form.frm button.success {
+  background-color: #16a566;
+}
+
+form.frm button.error {
+  background-color: #ed3415;
+}
+
+form.frm select, form.frm input[type=text], form.frm input[type=password], form.frm textarea {
+  width: 100%;
+  border: 1px solid var(--border-color-inputs);
+  border-radius: 0.5em;
+  padding: 0.5em;
+  display: block;
+  background-color: var(--bg-color-inputs);
+  color: var(--text-color-inputs);
+}
+
+form.frm input[type=text]:disabled, form.frm input[type=password]:disabled {
+  background-color: var(--bg-color-inputs-disabled);
+}
+
+form.frm select {
+  -webkit-appearance: none;
+}
+
+fieldset {
+  border: 0;
+  margin: 1em 0;
+  padding: 0;
+}
+
+table.tbl {
+  width: 100%;
+  border: 1px solid var(--bg-color);
+  border-radius: 0.5em;
+  margin: 1em 0;
+  padding: 0.5em;
+}
+
+table.tbl thead {
+  position: sticky;
+  background-color: var(--bg-color-main);
+  top: 0;
+}
+
+ul li, ol li {
+  margin: 0.25em;
+}
+
+table.tbl th {
+  text-align: start;
+  vertical-align: top;
+}
+
+table.tbl th.wireguard {
+  color: #88171a;
+  text-align: center;
+  border-bottom: 1px solid #88171a;
+}
+
+table.tbl td.wireguard, table.tbl td.openvpn {
+  padding: 0.5em;
+  margin: 0.75em;
+  border-radius: 0.5em;
+  font-weight: bold;
+  font-size: 90%;
+  display: inline-block;
+  color: white;
+}
+
+table.tbl td.wireguard {
+  background-color: #88171a;
+}
+
+table.tbl td.openvpn {
+  background-color: #ed7f22;
+}
+
+table.tbl th.openvpn {
+  color: #ed7f22;
+  text-align: center;
+  border-bottom: 1px solid #ed7f22;
+}
+
+table.tbl th.issues {
+  color: #cc6600;
+  text-align: center;
+  border-bottom: 1px solid #cc6600;
+}
+
+table.tbl td.text-right {
+  text-align: end;
+}
+
+table.tbl td, table.tbl th {
+  padding: 0.75em;
+}
+
+table.tbl ul {
+  margin: 0;
+  padding: 0 0 0 0;
+  list-style: none;
+}
+
+table.tbl li {
+  padding: 0;
+  margin-left: 0;
+}
+
+table.tbl li:first-child {
+  margin-top: 0;
+}
+
+table.tbl dl, table.tbl dt {
+  margin: 0;
+  padding: 0;
+}
+
+table.tbl dd {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+table.tbl form.frm {
+  margin: 0 0.25em;
+  display: inline;
+}
+
+table.tbl form.frm button {
+  margin: 0;
+}
+
+table.tbl td.tip {
+  width: 60%;
+  vertical-align: top;
+  font-size: 90%;
+}
+
+main {
+  width: 100%;
+  max-width: 60rem;
+  background-color: var(--bg-color-main);
+  padding: 0.5em 1em;
+}
+
+header.main h1 {
+  background-color: var(--bg-color-main-header);
+  color: var(--text-color-main-header);
+  text-align: center;
+  padding: 0.75em;
+  margin: 0;
+}
+
+p.filter, p.selector {
+  text-align: end;
+  font-size: small;
+  font-weight: bold;
+}
+
+p.selector {
+  text-align: center;
+}
+
+p.warning, p.error, p.plain {
+  padding: 1em 1.5em;
+  border-radius: 0.5em;
+}
+
+p.plain {
+  color: var(--body-text-color);
+  background-color: var(--bg-color);
+}
+
+span.plain, span.success, span.error, span.warning {
+  padding: 0.5em;
+  margin: 0.25em;
+  border-radius: 0.5em;
+  font-weight: bold;
+  font-size: 90%;
+  display: inline-block;
+}
+
+span.plain {
+  color: var(--body-text-color);
+  background-color: var(--bg-color);
+}
+
+span.success {
+  color: var(--bg-color-main);
+  background-color: #16a566;
+}
+
+span.error {
+  color: var(--bg-color-main);
+  background-color: #ed3415;
+}
+
+span.warning {
+  color: var(--bg-color-main);
+  background-color: #cc6600;
+}
+
+span.openvpn {
+  background-color: #ed7f22;
+  color: var(--bg-color-main);
+}
+
+span.wireguard {
+  background-color: #88171a;
+  color: white;
+}
+
+p.warning {
+  border: 1px solid #cc6600;
+  color: #cc6600;
+}
+
+p.error {
+  border: 1px solid #ed3415;
+  color: #ed3415;
+}
+
+main div.auth {
+  margin: 0 auto;
+  max-width: 20em;
+}
+
+main div.appAuth {
+  margin: 0 auto;
+  max-width: 30em;
+}
+
+dl dt {
+  margin: 0.5em 0;
+  display: block;
+  font-weight: bold;
+}
+
+figcaption {
+  font-size: 85%;
+  text-align: center;
+  font-style: italic;
+  padding: 1em;
+}
+
+figure svg {
+  max-width: 100%;
+  height: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+svg.appUsage {
+  display: block;
+  margin: 0 auto;
+  max-width: 40%;
+}
+
+ul.toc {
+  padding: 0 1em;
+  list-style: none;
+}
+
+ul.appUsage {
+  list-style: none;
+  padding: 0;
+}
+
+ul.appUsage li {
+  display: inline-block;
+  margin: 0;
+}
+
+.pieLegend {
+  color: var(--bg-color-main);
+  font-weight: bold;
+  padding: 0.5em;
+  margin: 0.5em;
+  display: inline-block;
+  border-radius: 1em;
+}
+
+/* @see https://iamkate.com/data/12-bit-rainbow/ */
+.pieColor1 {
+  fill: #817;
+  background-color: #817;
+}
+
+.pieColor2 {
+  fill: #a35;
+  background-color: #a35;
+}
+
+.pieColor3 {
+  fill: #c66;
+  background-color: #c66;
+}
+
+.pieColor4 {
+  fill: #e94;
+  background-color: #e94;
+}
+
+.pieColor5 {
+  fill: #ed0;
+  background-color: #ed0;
+}
+
+.pieColor6 {
+  fill: #9d5;
+  background-color: #9d5;
+}
+
+.pieColor7 {
+  fill: #4d8;
+  background-color: #4d8;
+}
+
+.pieColor8 {
+  fill: #2cb;
+  background-color: #2cb;
+}
+
+.pieColor9 {
+  fill: #0bc;
+  background-color: #0bc;
+}
+
+.pieColor10 {
+  fill: #09c;
+  background-color: #09c;
+}
+
+.pieColor11 {
+  fill: #36b;
+  background-color: #36b;
+}
+
+.pieColor12 {
+  fill: #639;
+  background-color: #639;
+}
+
+blockquote {
+  margin: 0.5em 0;
+  padding: 1em;
+  background-color: var(--bg-color);
+  border-left: 0.2em solid var(--border-color);
+  border-radius: 0 0.5em 0.5em 0;
+}
+
+blockquote:lang(ar-MA) {
+  margin-right: 0;
+  border-left: 0;
+  border-right: 0.2em solid var(--border-color);
+  border-radius: 0.5em 0 0 0.5em;
+}
+
+div.appApproval {
+  background-color: var(--bg-color);
+  display: flex;
+  align-items: center;
+  padding: 1em 0;
+  justify-content: space-evenly;
+  border-radius: 0.5em;
+  flex-wrap: wrap;
+  margin: 1em 0;
+}
+
+div.appApproval span {
+  font-size: 1.25rem;
+  color: var(--title-text-color);
+  display: inline-block;
+  background-image: url("../img/icon-Unknown.png");
+  background-repeat: no-repeat;
+  background-size: 64px 64px;
+  background-position: 50% 1em;
+  min-height: 64px;
+  text-align: center;
+  padding: calc(64px + 1.5em) 0.5em 1em 0.5em;
+  font-weight: bold;
+}
+
+div.appApproval span[class^="org.letsconnect-vpn.app"] {
+  background-image: url("../img/icon-LC.png");
+}
+
+div.appApproval span[class^="org.eduvpn.app"] {
+  background-image: url("../img/icon-eduVPN.png");
+}
+
+div.appApproval span[class^="org.govvpn.app"] {
+  background-image: url("../img/icon-govVPN.png");
+}
+
+div.appApproval form.frm {
+  display: inline-block;
+  width: initial;
+  padding: 0.5em;
+}
+
+p.lead {
+  text-align: center;
+  padding: 0em;
+  font-size: 1.75rem;
+  color: var(--lead-text-color);
+  font-style: italic;
+}
+
+table.stats {
+  border-collapse: separate;
+  border-spacing: 3px 0;
+  width: 85%;
+}
+
+table.stats td, table.stats th {
+  width: 1em;
+  text-align: center;
+  line-height: 0.5;
+}
+
+table.stats tbody th span, table.stats tfoot th span {
+  writing-mode: vertical-rl;
+  font-weight: normal;
+  white-space: nowrap;
+  line-height: 1em;
+  padding-top: 0.5em;
+  font-size: 85%;
+}
+
+table.stats tbody th span {
+  writing-mode: vertical-rl;
+}
+
+table.stats tbody td:not(:empty) {
+  background-color: #9a2e00;
+  color: transparent;
+}
+
+table.stats th.index {
+  box-sizing: content-box;
+  vertical-align: top;
+  padding: 0 0.5em;
+  border-top: 1px solid var(--border-color);
+}
+
+table.stats th.index span {
+  font-weight: bold;
+}
+
+@media screen and (min-width: 800px) {
+  main {
+    margin: -3em auto 0 auto;
+    padding: 1.5em 5em;
+    border-radius: 1em 1em 0 0;
+  }
+  header.main h1 {
+    padding: 0.75em 0 2em 0;
+  }
+}

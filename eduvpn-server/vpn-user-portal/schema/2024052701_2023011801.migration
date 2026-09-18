@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS connection_log_connection_id;

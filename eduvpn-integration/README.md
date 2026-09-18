@@ -1,0 +1,290 @@
+# eduVPN mTLS Posture Check — Native Integration
+
+This directory contains the changes needed to integrate mTLS-based device posture checking directly into the eduVPN codebase (not as an external proxy/bridge).
+
+## Architecture
+
+```
+Client                                       eduVPN Server
+------                                       ------------
+eduvpn-posture-connect (Go CLI)              Apache (port 443)
+  |                                            | SSLVerifyClient optional
+  | 1. GET /.well-known/vpn-user-portal        | SSLOptions +StdEnvVars
+  | 2. OAuth2 (browser login)                  |
+  | 3. POST /v3/connect                        v
+  |    + device cert in TLS handshake        vpn-user-portal (PHP)
+  |    + Bearer token                          |
+  |                                            | Read SSL_CLIENT_S_DN_CN
+  |                                            | PostureChecker->check()
+  |                                            |   -> Wazuh API query
+  |                                            |
+  |  <-- 200 + WireGuard config --             | Pass -> issue config
+  |  <-- 403 + JSON reason     --              | Fail -> reject + reason
+  |                                            |
+  | 4. wg-quick up                             |
+```
+
+## Security Design
+
+**Pre-tunnel posture check**: The mTLS handshake and Wazuh posture verification happen during the `/v3/connect` API call, BEFORE any WireGuard tunnel is established. Non-compliant devices never receive a VPN configuration.
+
+- Fail-closed: if Wazuh API is unreachable, connections are rejected
+- Device identity proven via X.509 certificate (CN = `device-<machine-id>`)
+- Certificate chain verified by Apache against step-ca CA bundle
+
+## Components
+
+### Server-side (vpn-user-portal patch)
+
+Files modified/added in `eduvpn-server/vpn-user-portal/`:
+
+| File | Change |
+|------|--------|
+| `src/PostureChecker.php` | **New** — Wazuh API client with JWT caching, agent status + optional SCA score check |
+| `src/Cfg/PostureCheckConfig.php` | **New** — Configuration class for posture check settings |
+| `src/Http/VpnApiThreeModule.php` | **Modified** — Posture gate inserted at the **top** of the `POST /v3/connect` handler, before any side effect (session eviction, config issuance) |
+| `src/Cfg/Config.php` | **Modified** — Added `postureCheckConfig()` method and `PostureCheck` to supported keys |
+| `web/api.php` | **Modified** — Instantiates `PostureChecker` when config is present |
+
+> ℹ️ **Testability:** `PostureChecker` is intentionally **not `final`** and its
+> `httpRequest()` is **`protected`** (not private) so unit tests can override the Wazuh
+> transport with canned responses and assert every decision branch deterministically.
+> The production path is unchanged (real curl over HTTPS). See `tests/unit-php/` and
+> `tests/README.md`.
+
+### Server-side (Apache)
+
+| File | Purpose |
+|------|---------|
+| `eduvpn-server/apache-mtls-snippet.conf` | Apache directives to add to the eduVPN vhost |
+
+### Client-side (Go CLI)
+
+| File | Purpose |
+|------|---------|
+| `client/eduvpn-posture-connect/main.go` | CLI entry point |
+| `client/eduvpn-posture-connect/discovery.go` | API endpoint discovery |
+| `client/eduvpn-posture-connect/oauth.go` | OAuth2 authorization code flow with PKCE |
+| `client/eduvpn-posture-connect/connect.go` | POST /v3/connect with mTLS |
+| `client/eduvpn-posture-connect/wireguard.go` | WireGuard config writer + wg-quick |
+| `client/eduvpn-posture-connect/httpclient.go` | HTTP client with mTLS support |
+
+Zero external dependencies — uses only Go stdlib (requires Go 1.21+).
+
+## Deployment
+
+### Prerequisites
+
+- eduVPN server deployed on Debian 13 (per `eduvpn-server/README.md`)
+- step-ca issuing device certificates (per `ca-server/README.md`)
+- Wazuh server running with API enabled (per `wazuh-server/README.md`)
+- Client device with Wazuh agent installed and device certificate
+
+### Server Setup
+
+#### 1. Deploy CA bundle
+
+```bash
+sudo mkdir -p /etc/eduvpn-mtls
+sudo cp ca-bundle.crt /etc/eduvpn-mtls/ca-bundle.crt
+```
+
+The CA bundle must contain both root and intermediate CA certificates.
+
+#### 2. Configure Apache
+
+Add the contents of `apache-mtls-snippet.conf` to your eduVPN Apache vhost config:
+
+```bash
+sudo vi /etc/apache2/sites-available/<hostname>.conf
+```
+
+Insert the directives inside the `<VirtualHost *:443>` block, then:
+
+```bash
+sudo systemctl restart apache2
+```
+
+**Important**: The `SSLVerifyClient optional` directive MUST be at the vhost level (not inside a `<Location>` block) because Go's TLS 1.3 does not support post-handshake client certificate requests.
+
+#### 3. Patch vpn-user-portal
+
+> **Layout note.** The overlay files use the upstream *source-repo* layout
+> (`src/…`, composer `vendor/autoload.php`). The **Debian package** installs the
+> PHP classes under `/usr/share/php/Vpn/Portal/` behind an autogenerated *classmap*
+> autoloader, and only `web/api.php` lives under `/usr/share/vpn-user-portal/web/`.
+> Map the files accordingly (this is exactly what `eduvpn-server/first-boot.sh`
+> automates in the Docker stack):
+
+```bash
+PHPDIR=/usr/share/php/Vpn/Portal          # namespaced classes (classmap-loaded)
+WEBDIR=/usr/share/vpn-user-portal/web      # entry points
+
+# Modified classes already in the classmap — drop-in replace:
+sudo cp src/Cfg/Config.php             "$PHPDIR/Cfg/Config.php"
+sudo cp src/Http/VpnApiThreeModule.php "$PHPDIR/Http/VpnApiThreeModule.php"
+
+# New classes:
+sudo cp src/PostureChecker.php         "$PHPDIR/PostureChecker.php"
+sudo cp src/Cfg/PostureCheckConfig.php "$PHPDIR/Cfg/PostureCheckConfig.php"
+
+# Register the two NEW classes — the classmap is autogenerated and doesn't know
+# them. Append a supplementary autoloader (Vpn\Portal\PostureChecker,
+# Vpn\Portal\PostureResult, Vpn\Portal\Cfg\PostureCheckConfig).
+# See eduvpn-server/first-boot.sh for the exact spl_autoload_register block.
+
+# api.php is a bootstrap entry point (NOT autoloaded): install it but keep the
+# Debian classmap require line instead of composer's vendor/autoload.php:
+sudo cp web/api.php "$WEBDIR/api.php"
+sudo sed -i "s#^require_once .*/vendor/autoload.php.*#require_once '/usr/share/php/Vpn/Portal/autoload.php';#" "$WEBDIR/api.php"
+```
+
+> On a **source install** (not the Debian package) the original
+> `cp src/… /usr/share/vpn-user-portal/src/…` layout with composer autoloading
+> applies instead.
+
+#### 4. Configure posture check
+
+Add the `PostureCheck` section to `/etc/vpn-user-portal/config.php`:
+
+```php
+return [
+    // ... existing config ...
+
+    'PostureCheck' => [
+        'wazuhApiUrl' => 'https://wazuh.manager:55000',
+        'wazuhUser' => 'wazuh-wui',
+        'wazuhPass' => 'MyS3cr37P450r.*-',
+        'wazuhCaCert' => '',       // empty = skip Wazuh TLS verify
+        'scaMinScore' => 0,        // 0 = disabled, e.g. 70 for 70% minimum
+    ],
+];
+```
+
+#### 5. Verify
+
+> ⚠️ **`/v3/info` does not exercise the gate.** The posture check is registered **only on
+> `POST /v3/connect`** (see `VpnApiThreeModule.php`); `GET /v3/info` never calls the
+> `PostureChecker` — `tests/perf/run.sh` deliberately uses it as the *ungated* baseline.
+> And the OAuth2 Bearer token is validated **before** route dispatch, so a token-less
+> `curl` gets **401**, whatever certificate it presents. A cert-only `curl` against
+> `/v3/info` therefore proves nothing about the posture gate.
+
+Verify against `/v3/connect`, with a valid access token. Get one from the browser flow, or
+headlessly for a portal-local account:
+
+```bash
+TOKEN=$(client/headless-oauth.sh --server vpn.example.org --user vpn --pass admin \
+          --cert /etc/eduvpn-client/device.crt --key /etc/eduvpn-client/device.key)
+```
+
+**a) With the device cert — expect `200` (config) or a `403` naming a posture reason:**
+
+```bash
+curl -sS -o /dev/stderr -w '\nHTTP %{http_code}\n' \
+     --cert /etc/eduvpn-client/device.crt \
+     --key  /etc/eduvpn-client/device.key \
+     -H "Authorization: Bearer $TOKEN" \
+     -H 'Accept: application/x-wireguard-profile' \
+     --data-urlencode 'profile_id=default' \
+     --data-urlencode "public_key=$(head -c32 /dev/urandom | base64)" \
+     https://vpn.example.org/vpn-user-portal/api/v3/connect
+```
+
+**b) Without the device cert — expect `403 {"error":"device certificate required"}`:**
+
+```bash
+curl -sS -o /dev/stderr -w '\nHTTP %{http_code}\n' \
+     -H "Authorization: Bearer $TOKEN" \
+     -H 'Accept: application/x-wireguard-profile' \
+     --data-urlencode 'profile_id=default' \
+     --data-urlencode "public_key=$(head -c32 /dev/urandom | base64)" \
+     https://vpn.example.org/vpn-user-portal/api/v3/connect
+```
+
+Simplest of all, once the client is built (see **Client Setup** below): `--dry-run` runs
+discovery, OAuth and `POST /v3/connect` and stops before touching WireGuard, so it is safe
+to repeat and needs no root:
+
+```bash
+eduvpn-posture-connect --server vpn.example.org --dry-run \
+  --cert /etc/eduvpn-client/device.crt --key /etc/eduvpn-client/device.key
+```
+
+Exit codes: `0` = posture check passed, `2` = rejected by the posture gate (403), `1` =
+any other error. This is exactly the invocation `tests/e2e/run.sh` drives for all eight
+scenarios.
+
+### Client Setup
+
+#### 1. Build the client
+
+```bash
+cd client/eduvpn-posture-connect
+go build -o eduvpn-posture-connect .
+sudo mv eduvpn-posture-connect /usr/local/bin/
+```
+
+#### 2. Connect
+
+```bash
+sudo eduvpn-posture-connect \
+  --server vpn.example.org \
+  --cert /etc/eduvpn-client/device.crt \
+  --key /etc/eduvpn-client/device.key
+```
+
+This will:
+1. Discover API endpoints
+2. Open browser for OAuth2 login
+3. Connect with mTLS posture check
+4. Set up WireGuard tunnel
+
+#### 3. Disconnect
+
+```bash
+sudo wg-quick down eduvpn
+```
+
+## Error Messages
+
+The client displays clear feedback on posture check results:
+
+| Scenario | HTTP | Message |
+|----------|------|---------|
+| No cert presented | 403 | `device certificate required` |
+| Invalid CN format | 403 | `invalid device certificate CN format` |
+| Agent not found | 403 | `no Wazuh agent registered for device "device-0123456789abcdef0123456789abcdef"` |
+| Agent not active | 403 | `Wazuh agent "device-0123456789abcdef0123456789abcdef" status is "disconnected" (expected "active")` |
+| SCA score too low | 403 | `SCA policy "CIS Benchmark" score 39 is below required minimum 70` |
+| Wazuh API down | 403 | `posture service unavailable` |
+| All checks pass | 200 | WireGuard config returned, tunnel established |
+
+## Configuration Reference
+
+### PostureCheck config (`/etc/vpn-user-portal/config.php`)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `wazuhApiUrl` | string | (required) | Wazuh Manager API URL (e.g. `https://wazuh.manager:55000`) |
+| `wazuhUser` | string | (required) | Wazuh API username |
+| `wazuhPass` | string | (required) | Wazuh API password |
+| `wazuhCaCert` | string | `""` | Path to CA cert for Wazuh TLS. Empty = skip verification. |
+| `scaMinScore` | int | `0` | Minimum SCA score (0 = disabled). Set to e.g. 70 for 70%. |
+
+### Client flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--server` | (required) | eduVPN server hostname |
+| `--profile` | (auto) | VPN profile ID. Auto-selects first available if omitted. |
+| `--cert` | `/etc/eduvpn-client/device.crt` | Path to device certificate |
+| `--key` | `/etc/eduvpn-client/device.key` | Path to device private key |
+| `--ca` | (system) | Path to CA bundle for server TLS verification |
+| `--interface` | `eduvpn` | WireGuard interface name |
+| `--token` | (none) | OAuth2 access token — skips the interactive browser login. Feed it one from `client/headless-oauth.sh`. |
+| `--dry-run` | `false` | Run the posture check only: stop after `POST /v3/connect`, do **not** bring up WireGuard (so no root needed). |
+
+`--token` and `--dry-run` are what make the flow scriptable: together they turn the CLI
+into a headless posture probe, which is exactly how `demo.sh` and every `tests/e2e/run.sh`
+scenario drive it.

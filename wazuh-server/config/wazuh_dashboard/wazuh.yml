@@ -1,0 +1,10 @@
+# Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
+# Derived from wazuh-docker v4.14.3. GPL-2.0-only; see wazuh-server/VENDORED.md.
+
+hosts:
+  - 1513629884013:
+      url: "https://wazuh.manager"
+      port: 55000
+      username: wazuh-wui
+      password: "MyS3cr37P450r.*-"
+      run_as: true

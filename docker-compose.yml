@@ -1,0 +1,291 @@
+# SPDX-License-Identifier: MIT
+services:
+  ca-server:
+    build:
+      context: ./ca-server
+      dockerfile: Dockerfile
+      args:
+        STEP_CA_VERSION: ${STEP_CA_VERSION}
+    container_name: ca-server
+    # step-ca (smallstep) – Automated Certificate Authority with REST API on :9000.
+    # Custom entrypoint (ca-server/ca-entrypoint.sh) initialises the PKI + PoC
+    # provisioners on first boot and publishes root_ca.crt / ca-bundle.crt /
+    # root_ca.fingerprint to the shared `pki` volume for the server + client.
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=${CA_NAME:-eduVPN-CA}
+      - DOCKER_STEPCA_INIT_DNS_NAMES=${CA_DNS_NAMES:-ca-server,localhost}
+      - DOCKER_STEPCA_INIT_PROVISIONER_NAME=admin
+      # DEMO SECRET — CA key-encryption password. CHANGE FOR PRODUCTION.
+      - DOCKER_STEPCA_INIT_PASSWORD=${CA_PASSWORD:-eduvpn-demo-ca-password}
+      # Leaf lifetime; step-ca's 24h default would expire the demo overnight.
+      - CA_LEAF_DURATION=${CA_LEAF_DURATION:-2160h}
+    ports:
+      # Loopback only. The stack reaches the CA as ca-server:9000 over the compose
+      # network, so this mapping exists purely so a human can inspect the CA from
+      # the host. It must NOT be published on all interfaces: /provisioners serves
+      # the PBES2-encrypted provisioner JWKs WITHOUT authentication, which makes
+      # the CA password an offline brute-force target — and that password mints
+      # device-<anything> certificates, i.e. the entire device identity. Same
+      # reasoning as the Wazuh enrolment ports below being expose-only.
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - step-ca-data:/home/step
+      - pki:/pki
+    networks:
+      - eduvpn-net
+    healthcheck:
+      test: ["CMD", "step", "ca", "health", "--ca-url", "https://localhost:9000", "--root", "/home/step/certs/root_ca.crt"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Wazuh Stack (Manager + Indexer + Dashboard)
+  # ---------------------------------------------------------------------------
+  # Before first run, generate internal TLS certs:
+  #   docker compose -f wazuh-server/generate-certs.yml run --rm generator
+  # ---------------------------------------------------------------------------
+
+  wazuh.manager:
+    image: wazuh/wazuh-manager:${WAZUH_VERSION}
+    hostname: wazuh.manager
+    container_name: wazuh-manager
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 655360
+        hard: 655360
+    # No host port publishing: the agent (client container) and the eduVPN
+    # posture check both reach the manager over the eduvpn-net bridge as
+    # "wazuh.manager". Enrollment (1515) is password-less, so publishing it to
+    # the host would let anyone register an agent under an arbitrary device name
+    # and defeat the posture check. Tests reach the API via `docker exec`.
+    expose:
+      - "1514"            # Agent connection (in-network only)
+      - "1515"            # Agent enrollment (in-network only)
+      - "55000"           # Wazuh API (in-network only)
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=${WAZUH_INDEXER_USER}
+      - INDEXER_PASSWORD=${WAZUH_INDEXER_PASS}
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=${WAZUH_API_USER}
+      - API_PASSWORD=${WAZUH_API_PASS}
+    volumes:
+      - wazuh_api_configuration:/var/ossec/api/configuration
+      - wazuh_etc:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_var_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+      - filebeat_etc:/etc/filebeat
+      - filebeat_var:/var/lib/filebeat
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/root-ca-manager.pem:/etc/ssl/root-ca.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.manager.pem:/etc/ssl/filebeat.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key
+      - ./wazuh-server/config/wazuh_cluster/wazuh_manager.conf:/wazuh-config-mount/etc/ossec.conf
+    networks:
+      - eduvpn-net
+    healthcheck:
+      # Wazuh API answers on :55000 once the manager is up (401 without auth is fine).
+      test: ["CMD-SHELL", "curl -sk -o /dev/null https://localhost:55000/ || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 120s
+
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:${WAZUH_VERSION}
+    hostname: wazuh.indexer
+    container_name: wazuh-indexer
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.key
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/admin.pem:/usr/share/wazuh-indexer/config/certs/admin.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/admin-key.pem:/usr/share/wazuh-indexer/config/certs/admin-key.pem
+      - ./wazuh-server/config/wazuh_indexer/wazuh.indexer.yml:/usr/share/wazuh-indexer/config/opensearch.yml
+      - ./wazuh-server/config/wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
+    networks:
+      - eduvpn-net
+    healthcheck:
+      # Cluster answers on :9200 once OpenSearch security is initialised.
+      test: ["CMD-SHELL", "curl -sk -u ${WAZUH_INDEXER_USER}:${WAZUH_INDEXER_PASS} https://localhost:9200/_cluster/health | grep -q status || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 120s
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:${WAZUH_VERSION}
+    hostname: wazuh.dashboard
+    container_name: wazuh-dashboard
+    restart: unless-stopped
+    ports:
+      # Host 8443 (not 443) so the eduVPN portal can own host 443.
+      - "8443:5601"       # Dashboard web UI
+    environment:
+      - INDEXER_USERNAME=${WAZUH_INDEXER_USER}
+      - INDEXER_PASSWORD=${WAZUH_INDEXER_PASS}
+      - WAZUH_API_URL=https://wazuh.manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASS}
+      - API_USERNAME=${WAZUH_API_USER}
+      - API_PASSWORD=${WAZUH_API_PASS}
+    volumes:
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
+      - ./wazuh-server/config/wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem
+      - ./wazuh-server/config/wazuh_dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      - ./wazuh-server/config/wazuh_dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+      - wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config
+      - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+    depends_on:
+      - wazuh.indexer
+    links:
+      - wazuh.indexer:wazuh.indexer
+      - wazuh.manager:wazuh.manager
+    networks:
+      - eduvpn-net
+
+  eduvpn-server:
+    build:
+      context: ./eduvpn-server
+      dockerfile: Dockerfile
+      args:
+        STEP_VERSION: ${STEP_CLI_VERSION}
+    container_name: eduvpn-server
+    hostname: ${VPN_FQDN}
+    # Real eduVPN server: systemd PID 1 boots, then first-boot.sh runs the
+    # official deploy_debian.sh + layers on the mTLS posture integration.
+    privileged: true          # systemd + WireGuard/nftables inside the container
+    cgroup: host              # systemd needs the host cgroup namespace (cgroup v2)
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    tmpfs:
+      - /run
+      - /run/lock
+    environment:
+      # Central config (from .env). CHANGE THE DEMO SECRETS FOR PRODUCTION.
+      - VPN_FQDN=${VPN_FQDN}
+      - CA_PASSWORD=${CA_PASSWORD}
+      - WAZUH_API_USER=${WAZUH_API_USER}
+      - WAZUH_API_PASS=${WAZUH_API_PASS}
+      - DEMO_USER=${DEMO_USER}
+      - DEMO_PASS=${DEMO_PASS}
+    ports:
+      - "443:443"             # eduVPN portal (HTTPS)
+      - "51820:51820/udp"     # WireGuard
+    volumes:
+      # Shared trust material published by the CA (read-only).
+      - pki:/pki:ro
+    networks:
+      eduvpn-net:
+        # The client reaches the portal as https://${VPN_FQDN}/.
+        aliases:
+          - ${VPN_FQDN}
+    depends_on:
+      ca-server:
+        condition: service_healthy
+      wazuh.manager:
+        condition: service_healthy
+    healthcheck:
+      # First boot runs the full eduVPN deploy_debian.sh (runtime apt installs),
+      # which takes minutes — hence the long start_period. Healthy = the portal
+      # answers on :443, which is what demo.sh / the client actually need.
+      test: ["CMD-SHELL", "curl -sk -o /dev/null https://localhost/ || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        STEP_VERSION: ${STEP_CLI_VERSION}
+        WAZUH_VERSION: ${WAZUH_VERSION}
+    container_name: eduvpn-client
+    # Managed Linux endpoint: device cert + Wazuh agent + posture-connect CLI.
+    privileged: true          # systemd + WireGuard tunnel inside the container
+    cgroup: host              # systemd needs the host cgroup namespace
+    cap_add:
+      - NET_ADMIN
+    tmpfs:
+      - /run
+      - /run/lock
+    environment:
+      # Central config (from .env). CHANGE THE DEMO SECRETS FOR PRODUCTION.
+      - VPN_FQDN=${VPN_FQDN}
+      - CA_PASSWORD=${CA_PASSWORD}
+    volumes:
+      # Persistent device identity + certs (machine-id, device.crt/key).
+      - client-config:/etc/eduvpn-client
+      # Shared trust material published by the CA (read-only).
+      - pki:/pki:ro
+    networks:
+      - eduvpn-net
+    depends_on:
+      ca-server:
+        condition: service_healthy
+      wazuh.manager:
+        condition: service_healthy
+      # service_started (not _healthy): the client provisions its identity from
+      # ca-server + wazuh.manager only — it does NOT need the eduVPN portal — so
+      # letting it come up in parallel with the server's long first-boot gets the
+      # device cert ready sooner. Demo/tests wait for readiness explicitly.
+      eduvpn-server:
+        condition: service_started
+    restart: unless-stopped
+
+networks:
+  eduvpn-net:
+    driver: bridge
+
+volumes:
+  # Trust material published by the CA (root_ca.crt, ca-bundle.crt,
+  # root_ca.fingerprint); consumed read-only by the server and client.
+  pki:
+  # Persistent client device identity (machine-id + device.crt/key).
+  client-config:
+  step-ca-data:
+  wazuh_api_configuration:
+  wazuh_etc:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_var_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  filebeat_etc:
+  filebeat_var:
+  wazuh-indexer-data:
+  wazuh-dashboard-config:
+  wazuh-dashboard-custom:
+

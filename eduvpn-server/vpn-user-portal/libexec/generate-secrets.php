@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+require_once \dirname(__DIR__) . '/vendor/autoload.php';
+$baseDir = \dirname(__DIR__);
+
+use fkooman\OAuth\Server\Signer;
+use Vpn\Portal\Cfg\Config;
+use Vpn\Portal\Crypto\HmacKey;
+use Vpn\Portal\FileIO;
+use Vpn\Portal\OpenVpn\CA\VpnCa;
+
+// allow group to read the created files/folders
+umask(0027);
+
+try {
+    $keyDir = $baseDir . '/config/keys';
+    FileIO::mkdir($keyDir);
+    $caDir = $keyDir . '/ca';
+    FileIO::mkdir($caDir);
+
+    $generateAdminApiKey = false;
+    $nodeNumberStr = null;
+    $generateHmac = false;
+    for ($i = 1; $i < $argc; ++$i) {
+        if ('--node' === $argv[$i]) {
+            if ($i + 1 < $argc) {
+                $nodeNumberStr = $argv[$i + 1];
+            }
+
+            continue;
+        }
+        if ('--admin-api' === $argv[$i]) {
+            $generateAdminApiKey = true;
+
+            continue;
+        }
+        if ('--hmac' === $argv[$i]) {
+            $generateHmac = true;
+
+            continue;
+        }
+        if ('--help' === $argv[$i]) {
+            echo 'SYNTAX: ' . $argv[0] . ' [--node NODE_NUMBER] [--admin-api] [--hmac]' . \PHP_EOL;
+
+            exit(0);
+        }
+    }
+
+    if (null !== $nodeNumberStr) {
+        // generate a secret for the specified node number
+        $nodeNumber = (int) $nodeNumberStr;
+        if ($nodeNumber < 0) {
+            throw new Exception('--node MUST be followed by a number >= 0');
+        }
+        // Node Key
+        $nodeKeyFile = $keyDir . '/node.' . $nodeNumber . '.key';
+        if (!FileIO::exists($nodeKeyFile)) {
+            $secretKey = random_bytes(32);
+            FileIO::write($nodeKeyFile, sodium_bin2hex($secretKey));
+        }
+
+        exit(0);
+    }
+
+    // HMAC key
+    if ($generateHmac) {
+        $hmacKeyFile = $keyDir . '/hmac.key';
+        if (!FileIO::exists($hmacKeyFile)) {
+            FileIO::write($hmacKeyFile, HmacKey::generate()->encode());
+        }
+    }
+
+    // OAuth key
+    $apiKeyFile = $keyDir . '/oauth.key';
+    if (!FileIO::exists($apiKeyFile)) {
+        FileIO::write($apiKeyFile, Signer::generateSecretKey());
+    }
+
+    // Node Key
+    $nodeKeyFile = $keyDir . '/node.0.key';
+    if (!FileIO::exists($nodeKeyFile)) {
+        $secretKey = random_bytes(32);
+        FileIO::write($nodeKeyFile, sodium_bin2hex($secretKey));
+    }
+
+    // Admin API Key
+    if ($generateAdminApiKey) {
+        $adminApiKeyFile = $keyDir . '/admin-api.key';
+        if (!FileIO::exists($adminApiKeyFile)) {
+            $secretKey = random_bytes(32);
+            FileIO::write($adminApiKeyFile, sodium_bin2hex($secretKey));
+        }
+    }
+
+    // OpenVPN CA
+    // NOTE: CA certificate and key only created when they do not yet exist...
+    $config = Config::fromFile($baseDir . '/config/config.php');
+    $vpnCa = new VpnCa($caDir, $config->vpnCaPath());
+    $vpnCa->initCa($config->caExpiry());
+} catch (Throwable $e) {
+    echo 'ERROR: ' . $e->getMessage() . \PHP_EOL;
+
+    exit(1);
+}

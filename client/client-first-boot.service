@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=Posture-gated eduVPN client first-boot provisioning
+After=network.target dbus.service
+ConditionPathExists=!/var/lib/eduvpn-client-first-boot.done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Forward the (demo) CA password so the client can authenticate to the
+# step-ca device-certs provisioner. CHANGE FOR PRODUCTION.
+PassEnvironment=CA_PASSWORD VPN_FQDN
+ExecStart=/usr/local/sbin/eduvpn-client-first-boot.sh
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

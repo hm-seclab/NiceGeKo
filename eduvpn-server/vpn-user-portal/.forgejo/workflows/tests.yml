@@ -1,0 +1,16 @@
+on: [push]
+jobs:
+    tests:
+        runs-on: codeberg-tiny-lazy
+        container:
+            image: codeberg.org/fkooman/ci:latest
+        steps:
+            - name: Clone Repository
+              run: |
+                git clone --depth 1 -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} .
+            - name: Install Dependencies
+              run: |
+                composer update
+            - name: Run Unit Tests
+              run: |
+                unshare -U -n phpunit9

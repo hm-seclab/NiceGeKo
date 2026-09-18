@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=eduVPN posture-gated server first-boot provisioning
+# Run once the base system is up; the container is only started after the CA
+# and Wazuh manager are healthy (docker-compose depends_on), so step-ca and
+# the eduVPN APT repo are reachable by the time this runs.
+After=network.target dbus.service
+ConditionPathExists=!/var/lib/eduvpn-first-boot.done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Forward the central config (from .env via compose) into the oneshot: the CA
+# password (step-ca admin provisioner), the FQDN, the Wazuh API creds, and the
+# demo portal account.
+PassEnvironment=CA_PASSWORD VPN_FQDN WAZUH_API_USER WAZUH_API_PASS DEMO_USER DEMO_PASS
+ExecStart=/usr/local/sbin/eduvpn-first-boot.sh
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

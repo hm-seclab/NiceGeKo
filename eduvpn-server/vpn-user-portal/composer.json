@@ -1,0 +1,76 @@
+{
+    "authors": [
+        {
+            "email": "fkooman@deic.dk",
+            "name": "François Kooman",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Vpn\\Portal\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Vpn\\Portal\\Tests\\": "tests/"
+        }
+    },
+    "description": "VPN Portal",
+    "license": "AGPL-3.0-or-later",
+    "name": "vpn/portal",
+    "repositories": [
+        {
+            "packagist.org": false
+        },
+        {
+            "type": "vcs",
+            "url": "https://codeberg.org/fkooman/php-oauth2-server"
+        },
+        {
+            "type": "vcs",
+            "url": "https://codeberg.org/fkooman/php-secookie"
+        },
+        {
+            "type": "vcs",
+            "url": "https://codeberg.org/fkooman/php-saml-sp"
+        },
+        {
+            "type": "vcs",
+            "url": "https://codeberg.org/fkooman/php-radius"
+        }
+    ],
+    "require": {
+        "ext-curl": "*",
+        "ext-date": "*",
+        "ext-filter": "*",
+        "ext-gmp": "*",
+        "ext-hash": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pcre": "*",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "ext-sodium": "*",
+        "ext-spl": "*",
+        "fkooman/oauth2-server": "^8.1",
+        "fkooman/radius": "^2",
+        "fkooman/secookie": "^6.2",
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "fkooman/saml-sp": "^2.4"
+    },
+    "suggest": {
+        "ext-ldap": "Support LDAP Authentication",
+        "ext-maxminddb": "Support MaxMind DB files",
+        "ext-pdo_mysql": "Support MySQL/MariaDB",
+        "ext-pdo_pgsql": "Support PostgreSQL"
+    },
+    "support": {
+        "email": "eduvpn-support@lists.geant.org",
+        "source": "https://codeberg.org/eduVPN/vpn-user-portal"
+    },
+    "type": "project"
+}

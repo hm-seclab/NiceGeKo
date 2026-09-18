@@ -1,0 +1,21 @@
+# Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
+#
+# Derived from wazuh-docker v4.14.3 (single-node/generate-indexer-certs.yml).
+# Licensed GPL-2.0-only by Wazuh Inc.; see wazuh-server/VENDORED.md. NOT covered
+# by this project's MIT licence.
+# =============================================================================
+# One-time certificate generation for Wazuh inter-component TLS
+#
+# Run ONCE before the first `docker compose up`:
+#   docker compose -f generate-certs.yml run --rm generator
+# =============================================================================
+
+services:
+  generator:
+    image: wazuh/wazuh-certs-generator:0.0.4
+    hostname: wazuh-certs-generator
+    environment:
+      - CERT_TOOL_VERSION=4.14
+    volumes:
+      - ./config/wazuh_indexer_ssl_certs/:/certificates/
+      - ./config/certs.yml:/config/certs.yml

@@ -1,0 +1,24 @@
+# gitleaks config for eduVPNextension.
+# Extends the default ruleset, but allowlists the DOCUMENTED demo secrets that
+# the PoC ships on purpose (see README "Security note — demo secrets"). This way
+# gitleaks only fails on NEW / accidental secrets, not the intentional demo ones.
+title = "eduVPNextension gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented demo secrets (change for production) — intentional in this PoC"
+regexTarget = "line"
+regexes = [
+  '''MyS3cr37P450r\.\*-''',            # Wazuh API password (API_PASSWORD)
+  '''SecretPassword''',                # Wazuh indexer password (INDEXER_PASSWORD)
+  '''eduvpn-demo-ca-password''',       # step-ca demo key password (CA_PASSWORD)
+  '''kibanaserver''',                  # Wazuh dashboard demo password
+  '''<password>''',                    # doc placeholders in curl examples
+]
+paths = [
+  '''\.env\.example$''',               # template of overridable demo values
+  '''tests/lint/gitleaks-allowlist\.toml$''',  # this file lists the demo secrets
+  '''eduvpn-server/vpn-user-portal/tests/''',  # vendored upstream portal test fixtures
+]

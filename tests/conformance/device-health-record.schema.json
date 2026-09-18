@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eduvpnextension/concept/device-health-record.schema.json",
+  "title": "Device Health Record",
+  "description": "Canonical record from concept/universal-device-health-interface.md (§5.3/§5.4). A provider adapter maps its native output onto this shape.",
+  "type": "object",
+  "required": ["schemaVersion", "device", "provider", "signals", "freshness"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "recordId": { "type": "string" },
+    "device": {
+      "type": "object",
+      "required": ["id", "idScheme"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "idScheme": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scheme", "value"],
+            "properties": {
+              "scheme": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "assessedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "namespace", "type", "status", "observedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "namespace": { "type": "string" },
+          "type": { "enum": ["state", "score", "boolean", "count", "measurement"] },
+          "value": {},
+          "status": { "enum": ["pass", "fail", "unknown", "not_applicable"] },
+          "observedAt": { "type": "string", "format": "date-time" },
+          "scale": {
+            "type": "object",
+            "properties": {
+              "min": { "type": "number" },
+              "max": { "type": "number" },
+              "unit": { "type": "string" }
+            }
+          },
+          "detail": { "type": "object" },
+          "failureMode": { "enum": ["open", "closed"] },
+          "source": { "type": "object" }
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["decision"],
+      "properties": {
+        "decision": { "enum": ["pass", "fail", "indeterminate"] },
+        "reason": { "type": "string" },
+        "evaluatedBy": { "enum": ["provider", "consumer"] },
+        "failedSignals": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": ["generatedAt"],
+      "properties": {
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "maxAgeSeconds": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+/vendor
+/data
+/config/*.php
+/config/keys
+/config/views
+/config/profiles
+/.php-cs-fixer.cache
+/.phpunit.result.cache
+/.phpunit.cache
+/phpstan.neon
+
+# ignore symlinks to styling and translation folders
+web/css/eduVPN
+web/css/LC
+web/css/govVPN
+web/img/eduVPN
+web/img/LC
+web/img/govVPN
+web/fonts
+views/eduVPN
+views/LC
+views/govVPN
+locale/eduVPN
+locale/LC
+locale/govVPN

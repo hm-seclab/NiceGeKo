@@ -1,0 +1,292 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+namespace Vpn\Portal\OpenVpn;
+
+use Vpn\Portal\Cfg\OpenVpnConfig;
+use Vpn\Portal\Cfg\ProfileConfig;
+use Vpn\Portal\Dns;
+use Vpn\Portal\Ip;
+use Vpn\Portal\IpNetList;
+use Vpn\Portal\OpenVpn\CA\CaInterface;
+
+/**
+ * Single OpenVPN Process for OpenVPN >= 2.7.
+ *
+ * A single OpenVPN process will listen on all specified UDP and TCP ports.
+ * Combining this with the DCO kernel driver (in Linux >= 6.16) will result in
+ * much simpler configuration and higher performance.
+ */
+final class SingleProcessServerConfig implements ServerConfigInterface
+{
+    private const LIBEXEC_DIR = '/usr/libexec/vpn-server-node';
+
+    private int $tunCount = 0;
+
+    public function __construct(
+        private OpenVpnConfig $openVpnConfig,
+        private CaInterface $ca,
+        private TlsCrypt $tlsCrypt
+    ) {}
+
+    /**
+     * @return array<string,string>
+     */
+    #[\Override]
+    public function getProfile(ProfileConfig $profileConfig, int $nodeNumber, bool $preferAes, string $vpnUser, string $vpnGroup): array
+    {
+        $certInfo = $this->ca->serverCert($profileConfig->hostName($nodeNumber), $profileConfig->profileId());
+
+        $oRangeFour = $profileConfig->oRangeFour($nodeNumber);
+        $oRangeSix = $profileConfig->oRangeSix($nodeNumber);
+        // we always assign at most a `/112` prefix to OpenVPN processes
+        // instead of whatever the admin configured as `oRangeSix` to avoid
+        // OpenVPN issuing client IPs starting from `::1000` instead of
+        // starting from `::2`...
+        // @see https://github.com/OpenVPN/openvpn/blob/4523e506bd2978c78a29824ce471c0518e85cb6c/src/openvpn/helper.c#L219-L226
+        if ($oRangeSix->prefix() < 112) {
+            $oRangeSix = Ip::fromIp($oRangeSix->address(), 112)->network();
+        }
+
+        $serverConfig = [
+            '# OpenVPN Server Config | Automatically Generated | Do NOT modify!',
+            'verb 3',
+            'dev-type tun',
+            \sprintf('user %s', $vpnUser),
+            \sprintf('group %s', $vpnGroup),
+            'topology subnet',
+            'persist-tun',
+            'remote-cert-tls client',
+
+            // Only ECDHE
+            'dh none',
+            // >= TLSv1.3
+            'tls-version-min 1.3',
+
+            self::getDataCiphers($preferAes),
+
+            // renegotiate data channel key every 10 hours instead of every hour
+            \sprintf('reneg-sec %d', 10 * 60 * 60),
+            \sprintf('client-connect %s/client-connect', self::LIBEXEC_DIR),
+            \sprintf('client-disconnect %s/client-disconnect', self::LIBEXEC_DIR),
+            \sprintf('server %s %s', $oRangeFour->network()->address(), $oRangeFour->netmask()),
+            \sprintf('server-ipv6 %s', (string) $oRangeSix),
+            // OpenVPN's pool management does NOT include the last usable IP in
+            // the range in the pool, and obviously not the first one as that
+            // will be used by OpenVPN itself. So, if you have the range
+            // 10.3.240/25 that would give room for 128 - 3 (network,
+            // broadcast, OpenVPN) = 125 clients. But OpenVPN thinks
+            // differently:
+            //
+            //      ifconfig_pool_start = 10.3.240.2
+            //      ifconfig_pool_end = 10.3.240.125
+            //
+            // it keeps 10.3.240.126 out of the pool, which is a totally valid
+            // address, but alas, won't be available to clients... So we only
+            // have *124* possible client IPs to be issued...
+            //
+            // the same is true for the smallest possible network (/29):
+            //      ifconfig_pool_start = 10.3.240.2
+            //      ifconfig_pool_end = 10.3.240.5
+            //
+            // We MUST set max-clients to this number as that will cause a nice
+            // timout on the OpenVPN process for the client, until it will try
+            // the next available OpenVPN process...
+            // @see https://community.openvpn.net/openvpn/ticket/1347
+            // @see https://community.openvpn.net/openvpn/ticket/1348
+            \sprintf('max-clients %d', $oRangeFour->numberOfHostsFour() - 2),
+            // technically we do NOT need "keepalive" (ping/ping-restart) on
+            // TCP, but it seems we do need it to avoid clients disconnecting
+            // after 2 minutes of inactivity when the first (previous?) remote
+            // was UDP and the default of 120s was set and not properly reset
+            // when switching to a TCP remote... This is pure speculation, but
+            // having "keepalive" on TCP does keep clients over TCP
+            // connected, so it does something at least...
+            // @see https://sourceforge.net/p/openvpn/mailman/message/37168823/
+            'keepalive 10 60',
+            'script-security 2',
+            // every profile needs its own OpenVPN process, so we need to keep
+            // track of the `tun` device numbers
+            \sprintf('dev tun%d', $this->tunCount++),
+            \sprintf('management /run/openvpn-server/%s.sock unix', $profileConfig->profileId()),
+            \sprintf('setenv PROFILE_ID %s', $profileConfig->profileId()),
+
+            '<ca>',
+            $this->ca->caCert()->pemCert(),
+            '</ca>',
+            '<cert>',
+            $certInfo->pemCert(),
+            '</cert>',
+            '<key>',
+            $certInfo->pemKey(),
+            '</key>',
+            '<tls-crypt>',
+            $this->tlsCrypt->get($profileConfig->profileId()),
+            '</tls-crypt>',
+        ];
+
+        // MTU
+        if (null !== $setMtu = $this->openVpnConfig->setMtu()) {
+            $serverConfig[] = \sprintf('tun-mtu %d', $setMtu);
+        }
+
+        if (!$profileConfig->oEnableLog()) {
+            $serverConfig[] = 'log /dev/null';
+        }
+
+        foreach ($profileConfig->oUdpPortList() as $udpPort) {
+            // it looks like "udp" as protocol is always accepted, no need
+            // for udp4 or udp6 in any scenario
+            $serverConfig[] = \sprintf('local %s %d udp', $profileConfig->oListenOn($nodeNumber)->address(), $udpPort);
+        }
+        foreach ($profileConfig->oTcpPortList() as $tcpPort) {
+            // it looks like "tcp-server" as protocol is always accepted, no
+            // need for tcp4-server or tcp6-server in any scenario
+            $serverConfig[] = \sprintf('local %s %d tcp-server', $profileConfig->oListenOn($nodeNumber)->address(), $tcpPort);
+        }
+
+        if (0 !== \count($profileConfig->oTcpPortList())) {
+            $serverConfig[] = 'tcp-nodelay';
+        }
+
+        if (0 !== \count($profileConfig->oUdpPortList())) {
+            // notify the clients to reconnect to the exact same OpenVPN process
+            // when the OpenVPN process restarts...
+            $serverConfig[] = 'explicit-exit-notify 1';
+            // also ask the clients on UDP to tell us when they leave...
+            // https://github.com/OpenVPN/openvpn/commit/422ecdac4a2738cd269361e048468d8b58793c4e
+            $serverConfig[] = 'push "explicit-exit-notify 1"';
+        }
+
+        // Routes
+        $serverConfig = array_merge($serverConfig, self::getRoutes($profileConfig, Dns::ipFour($profileConfig->hostName($nodeNumber))));
+
+        // DNS
+        $serverConfig = array_merge($serverConfig, self::getDns($profileConfig, $oRangeFour, $oRangeSix));
+
+        return [
+            \sprintf('%s.conf', $profileConfig->profileId()) => implode(\PHP_EOL, $serverConfig),
+        ];
+    }
+
+    private static function getDataCiphers(bool $preferAes): string
+    {
+        if ($preferAes) {
+            return 'data-ciphers AES-256-GCM:CHACHA20-POLY1305';
+        }
+
+        return 'data-ciphers CHACHA20-POLY1305:AES-256-GCM';
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getRoutes(ProfileConfig $profileConfig, IpNetList $hostNameIpList): array
+    {
+        $routeConfig = [];
+        $routeList = new IpNetList();
+        if ($profileConfig->defaultGateway()) {
+            // send all IPv4 and IPv6 traffic over the VPN tunnel
+            $redirectFlags = ['def1', 'ipv6'];
+            if ($profileConfig->oBlockLan()) {
+                // Block  access to local LAN
+                $redirectFlags[] = 'block-local';
+            }
+            $routeConfig[] = \sprintf('push "redirect-gateway %s"', implode(' ', $redirectFlags));
+            // quirk needed for Windows otherwise Windows thinks there is no
+            // Internet connectivity
+            $routeList->add(Ip::fromIpPrefix('0.0.0.0/0'));
+        }
+
+        // (additional) prefixes to send over the VPN
+        foreach ($profileConfig->routeList() as $routeIpPrefix) {
+            $routeList->add(Ip::fromIpPrefix($routeIpPrefix));
+        }
+        foreach ($routeList->ls() as $routeIpPrefix) {
+            if (Ip::IP_6 === $routeIpPrefix->family()) {
+                // IPv6
+                $routeConfig[] = \sprintf('push "route-ipv6 %s"', (string) $routeIpPrefix);
+            } else {
+                // IPv4
+                $routeConfig[] = \sprintf('push "route %s %s"', $routeIpPrefix->address(), $routeIpPrefix->netmask());
+            }
+        }
+
+        // prefixes NOT to send over the VPN
+        $excludeRouteList = new IpNetList();
+        foreach ($profileConfig->excludeRouteList() as $routeIpPrefix) {
+            $excludeRouteList->add(Ip::fromIpPrefix($routeIpPrefix));
+        }
+
+        // *iff* we operate in "split tunnel" mode *and* the IPv4 address of
+        // the node is contained within a `routeList` prefix, we exclude it
+        // explicitly
+        if (!$profileConfig->defaultGateway()) {
+            foreach ($routeList->ls() as $routeIpPrefix) {
+                foreach ($hostNameIpList->ls() as $hostNameIp) {
+                    if ($routeIpPrefix->contains($hostNameIp)) {
+                        $excludeRouteList->add($hostNameIp);
+                    }
+                }
+            }
+        }
+
+        foreach ($excludeRouteList->ls() as $routeIpPrefix) {
+            if (Ip::IP_6 === $routeIpPrefix->family()) {
+                // IPv6
+                // This is currently not working for all clients, there is an
+                // open issue + PR for it
+                // @see https://community.openvpn.net/openvpn/ticket/1161
+                $routeConfig[] = \sprintf('push "route-ipv6 %s net_gateway_ipv6"', (string) $routeIpPrefix);
+            } else {
+                // IPv4
+                $routeConfig[] = \sprintf('push "route %s %s net_gateway"', $routeIpPrefix->address(), $routeIpPrefix->netmask());
+            }
+        }
+
+        return $routeConfig;
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getDns(ProfileConfig $profileConfig, Ip $rangeFourIp, Ip $rangeSixIp): array
+    {
+        $dnsServerList = $profileConfig->dnsServerList();
+
+        $dnsEntries = [];
+
+        // push DNS servers when default gateway is set, or there are some
+        // search domains specified
+        if ($profileConfig->defaultGateway() || 0 !== \count($profileConfig->dnsSearchDomainList())) {
+            foreach ($dnsServerList as $dnsAddress) {
+                // convert "placeholders" with first host in the prefix
+                if ('@GW4@' === $dnsAddress) {
+                    $dnsAddress = $rangeFourIp->firstHost();
+                }
+                if ('@GW6@' === $dnsAddress) {
+                    $dnsAddress = $rangeSixIp->firstHost();
+                }
+                $dnsEntries[] = \sprintf('push "dhcp-option DNS %s"', $dnsAddress);
+            }
+        }
+
+        // prevent DNS leakage on Windows when VPN is default gateway and
+        // VPN has DNS servers
+        if ($profileConfig->defaultGateway() && 0 !== \count($dnsServerList)) {
+            $dnsEntries[] = 'push "block-outside-dns"';
+        }
+
+        // provide "search domains" to the VPN client
+        foreach ($profileConfig->dnsSearchDomainList() as $dnsSearchDomain) {
+            $dnsEntries[] = \sprintf('push "dhcp-option DOMAIN-SEARCH %s"', $dnsSearchDomain);
+        }
+
+        return $dnsEntries;
+    }
+}

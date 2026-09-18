@@ -1,0 +1,247 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "620e6f34841a996363d8733d5f59735d",
+    "packages": [
+        {
+            "name": "fkooman/oauth2-server",
+            "version": "8.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://codeberg.org/fkooman/php-oauth2-server.git",
+                "reference": "a1c2e2b62bf315e82f5bb7e92a897f297ca9fb6e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://codeberg.org/api/v1/repos/fkooman/php-oauth2-server/archive/a1c2e2b62bf315e82f5bb7e92a897f297ca9fb6e.zip",
+                "reference": "a1c2e2b62bf315e82f5bb7e92a897f297ca9fb6e",
+                "shasum": ""
+            },
+            "require": {
+                "ext-date": "*",
+                "ext-hash": "*",
+                "ext-json": "*",
+                "ext-pcre": "*",
+                "ext-pdo": "*",
+                "ext-sodium": "*",
+                "ext-spl": "*",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "ext-pdo_sqlite": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "fkooman\\OAuth\\Server\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "fkooman\\OAuth\\Server\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "email": "fkooman@tuxed.net",
+                    "name": "François Kooman"
+                }
+            ],
+            "description": "Simple and secure OAuth 2.0 server",
+            "support": {
+                "email": "fkooman@tuxed.net",
+                "source": "https://codeberg.org/fkooman/php-oauth2-server",
+                "issues": "https://codeberg.org/fkooman/php-oauth2-server/issues"
+            },
+            "time": "2026-01-08T14:58:59+01:00"
+        },
+        {
+            "name": "fkooman/radius",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://codeberg.org/fkooman/php-radius.git",
+                "reference": "11d52b86b41078fe747872680a424af3c6040fdb"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://codeberg.org/api/v1/repos/fkooman/php-radius/archive/11d52b86b41078fe747872680a424af3c6040fdb.zip",
+                "reference": "11d52b86b41078fe747872680a424af3c6040fdb",
+                "shasum": ""
+            },
+            "require": {
+                "ext-hash": "*",
+                "ext-spl": "*",
+                "php": ">=7.4"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "fkooman\\Radius\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "fkooman\\Radius\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "email": "fkooman@tuxed.net",
+                    "name": "François Kooman"
+                }
+            ],
+            "description": "Very Simple RADIUS Client",
+            "support": {
+                "email": "fkooman@tuxed.net",
+                "source": "https://codeberg.org/fkooman/php-radius",
+                "issues": "https://codeberg.org/fkooman/php-radius/issues"
+            },
+            "time": "2024-08-01T14:39:02+02:00"
+        },
+        {
+            "name": "fkooman/secookie",
+            "version": "6.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://codeberg.org/fkooman/php-secookie.git",
+                "reference": "8658a99dac6f4d3b264c81c0c4994a2d2433f4e5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://codeberg.org/api/v1/repos/fkooman/php-secookie/archive/8658a99dac6f4d3b264c81c0c4994a2d2433f4e5.zip",
+                "reference": "8658a99dac6f4d3b264c81c0c4994a2d2433f4e5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-date": "*",
+                "ext-intl": "*",
+                "ext-json": "*",
+                "ext-pcre": "*",
+                "ext-sodium": "*",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "ext-pdo_sqlite": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "fkooman\\SeCookie\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "fkooman\\SeCookie\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "email": "fkooman@tuxed.net",
+                    "name": "François Kooman"
+                }
+            ],
+            "description": "Modern HTTP cookie and session library",
+            "support": {
+                "email": "fkooman@tuxed.net",
+                "source": "https://codeberg.org/fkooman/php-secookie",
+                "issues": "https://codeberg.org/fkooman/php-secookie/issues"
+            },
+            "time": "2024-11-11T14:23:07+01:00"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "fkooman/saml-sp",
+            "version": "2.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://codeberg.org/fkooman/php-saml-sp.git",
+                "reference": "15ea5a3211fb6a31d84420361571ffefcb7f651c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://codeberg.org/api/v1/repos/fkooman/php-saml-sp/archive/15ea5a3211fb6a31d84420361571ffefcb7f651c.zip",
+                "reference": "15ea5a3211fb6a31d84420361571ffefcb7f651c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-date": "*",
+                "ext-dom": "*",
+                "ext-filter": "*",
+                "ext-hash": "*",
+                "ext-libxml": "*",
+                "ext-openssl": "*",
+                "ext-pcre": "*",
+                "ext-sodium": "*",
+                "ext-spl": "*",
+                "ext-zlib": "*",
+                "fkooman/secookie": "^6.2",
+                "php": ">=7.4"
+            },
+            "type": "project",
+            "autoload": {
+                "psr-4": {
+                    "fkooman\\SAML\\SP\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "fkooman\\SAML\\SP\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "email": "fkooman@tuxed.net",
+                    "name": "François Kooman"
+                }
+            ],
+            "description": "Secure SAML Service Provider",
+            "support": {
+                "email": "fkooman@tuxed.net",
+                "source": "https://codeberg.org/fkooman/php-saml-sp",
+                "issues": "https://codeberg.org/fkooman/php-saml-sp/issues"
+            },
+            "time": "2025-01-06T09:54:29+01:00"
+        }
+    ],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {},
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": {
+        "ext-curl": "*",
+        "ext-date": "*",
+        "ext-filter": "*",
+        "ext-gmp": "*",
+        "ext-hash": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pcre": "*",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "ext-sodium": "*",
+        "ext-spl": "*",
+        "php": ">=8.0"
+    },
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
+}

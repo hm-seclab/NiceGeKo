@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+namespace Vpn\Portal\Tests;
+
+use PHPUnit\Framework\TestCase;
+use Vpn\Portal\Crypto\Minisign\Signature;
+use Vpn\Portal\FileIO;
+
+/**
+ * @covers \Vpn\Portal\Crypto\Minisign\Signature
+ *
+ * @uses \Vpn\Portal\Base64
+ * @uses \Vpn\Portal\FileIO
+ */
+final class SignatureTest extends TestCase
+{
+    public function testSignatureFromFile(): void
+    {
+        $s = Signature::fromFile(__DIR__ . '/minisign.pub.minisig');
+        static::assertSame('d5820960685b3d2e', bin2hex($s->keyId));
+        static::assertSame('8a78784df08706ff5e9ec85cbe25659db41a6db4c94544ffce704efdd3249191fc8a72f1162422100b862c70b7881b24bfd8764f677ad56a299294591ffb2402', bin2hex($s->rawSignature));
+    }
+
+    public function testSignatureFromString(): void
+    {
+        $s = Signature::fromString(FileIO::read(__DIR__ . '/minisign.pub.minisig'));
+        static::assertSame('d5820960685b3d2e', bin2hex($s->keyId));
+        static::assertSame('8a78784df08706ff5e9ec85cbe25659db41a6db4c94544ffce704efdd3249191fc8a72f1162422100b862c70b7881b24bfd8764f677ad56a299294591ffb2402', bin2hex($s->rawSignature));
+    }
+}
